@@ -3,12 +3,12 @@ from batchhandling import SocketBatchHandler
 import time
 
 handler = SocketBatchHandler()
-handler.submit_job('submit echo hee hee')
-handler.submit_job('submit test')
-handler.submit_job('submit python -c "print(\'from python\')"')
-handler.submit_job('count')
+handler.submit('submit echo hee hee')
+handler.submit('submit test')
+handler.submit('submit python -c "print(\'from python\')"')
+handler.submit('count')
 time.sleep(3)
-handler.submit_job('count')
+handler.submit('count')
 
 
 exit(0)

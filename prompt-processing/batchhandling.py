@@ -18,15 +18,25 @@ class SocketBatchHandler(BatchHandler):
         self.address = address
         self.port = port
 
-    def submit_job(self, job):
+    def submit(self, job):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.connect((self.address, self.port))
-            s.sendall(job.encode())
+            s.sendall(f'submit {job}'.encode())
             data = s.recv(1024)
         print(f'Received: {data.decode()}')
 
     def get_running(self):
-        return self.running_jobs
+        file_names = []
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.connect((self.address, self.port))
+            s.sendall('count'.encode())
+            data = s.recv(1024)
+        data = data.decode().strip()
+        jobs = data.replace('[', '').replace(']', '').split(', ')
+        for job in jobs:
+            f = job.split(' ')[-1]
+            file_names.append(f)
+        return file_names
 
 
 class HTCondorBatchHandler(BatchHandler):

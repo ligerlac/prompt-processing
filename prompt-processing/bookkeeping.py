@@ -21,9 +21,9 @@ class LocalBookKeeper(BookKeeper):
         self.status_dict = {}
         self.n_tries_dict = {}
 
-    def register(self, job):
-        self.status_dict[job.file_name] = 'to_process'
-        self.n_tries_dict[job.file_name] = 0
+    def register(self, file_name):
+        self.status_dict[file_name] = 'to_process'
+        self.n_tries_dict[file_name] = 0
 
     def knows_file(self, file_name):
         return file_name in self.status_dict
@@ -33,7 +33,7 @@ class LocalBookKeeper(BookKeeper):
         for k, v in self.status_dict.items():
             if k in ['finished']:
                 continue
-            unfinished[k] = v
+            unfinished.append(v)
         return unfinished
 
 

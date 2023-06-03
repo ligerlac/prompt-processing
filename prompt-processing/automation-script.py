@@ -4,15 +4,7 @@ import logging
 from batchhandling import batch_handlers
 from bookkeeping import book_keepers
 from filehandling import get_files_in_buffer, was_success
-from dataclasses import dataclass
-
-
-@dataclass
-class Job:
-    file_name: str
-    pid: int = -1
-    n_tries: int = 0
-    status: str = 'new'  # [new, running, failed, finished]
+# from dataclasses import dataclass
 
 
 def main(args):
@@ -24,9 +16,8 @@ def main(args):
         for f in get_files_in_buffer():
             if book_keeper.knows_file(f):
                 continue
-            j = Job(f)
-            book_keeper.register(j)
-            batch_handler.submit(j)
+            book_keeper.register(f)
+            batch_handler.submit(f'python analyze.py {f}')
 
         previous_jobs = book_keeper.get_unfinished()
         running_jobs = batch_handler.get_running()
@@ -57,8 +48,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--max-tries', type=int, default=2)
     parser.add_argument('--sleep-time', type=int, default=10)
-    parser.add_argument('--batch-name', choices=['HTCondor', 'slurm'],
-                        default='HTCondor')
+    parser.add_argument('--batch-name', choices=['Socket', 'HTCondor', 'slurm'],
+                        default='Socket')
     parser.add_argument('--book-keeper', choices=['local', 'DB'],
                         default='local')
     parser.add_argument('-l', '--log-level', choices=['DEBUG', 'INFO', 'WARNING'],
