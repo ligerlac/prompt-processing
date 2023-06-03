@@ -4,7 +4,6 @@ import logging
 from batchhandling import batch_handlers
 from bookkeeping import book_keepers
 from filehandling import get_files_in_buffer, was_success
-# from dataclasses import dataclass
 
 
 def main(args):
@@ -14,7 +13,7 @@ def main(args):
 
     while True:
         for f in get_files_in_buffer():
-            if book_keeper.knows_file(f):
+            if book_keeper.is_registered(f):
                 continue
             book_keeper.register(f)
             batch_handler.submit(f'python analyze.py {f}')
@@ -31,8 +30,8 @@ def main(args):
                 logging.info(f'{f} was successful')
                 book_keeper.mark_as_success(f)
                 continue
-            book_keeper.count_fail(f)
-            n_fails = book_keeper.get_n_tries(f)
+            book_keeper.increment_tries(f)
+            n_fails = book_keeper.get_tries(f)
             logging.info(f'{f} has failed for {n_fails}-th time')
             if n_fails <= args.max_tries:
                 logging.info(f'{f} try again')
