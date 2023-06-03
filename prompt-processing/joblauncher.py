@@ -9,17 +9,17 @@ import logging
 all_jobs = {}
 
 
-def launch_job(job: str, log_level: int) -> None:
+def launch_job(command: str, log_level: int) -> None:
     logging.getLogger().setLevel(log_level)
     proc = subprocess.Popen(
-        # f'echo {job} && sleep {random.randint(1, 5)}',
-        f'echo {job} && sleep {2}', shell=True,
-        stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        command, shell=True,
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE
+    )
     out, err = proc.communicate()
     if proc.returncode == 0:
-        logging.info(f'job {job} returned {out.decode()}')
+        logging.info(f'successfully ran command <{command}>. stdout:\n{out.decode()}')
     else:
-        logging.error(err.decode())
+        logging.error(f'error when running command <{command}>. stdout:\n{out.decode()}\nstderr:\n{err.decode()}')
 
 
 def enqueue_job(line: str) -> str:
@@ -38,9 +38,13 @@ def get_running_jobs() -> str:
 
 def process_command(line) -> str:
     first_word = line.split(' ')[0]
-    return {'submit': enqueue_job(first_word),
-            'count': get_running_jobs()
-            }.get(first_word, 'invalid command')
+    rest = line[len(first_word)+1:]
+    if first_word == 'submit':
+        return enqueue_job(rest)
+    elif first_word == 'count':
+        return get_running_jobs()
+    else:
+        return 'invalid command'
 
 
 def serve_socket(s: socket.socket()) -> None:
