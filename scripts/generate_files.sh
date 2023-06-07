@@ -2,7 +2,7 @@
 
 # Check if the correct number of arguments was provided
 if [ "$#" -ne 3 ]; then
-    echo "Usage: $0 <directory> <period> <lifetime>"
+    echo "Usage: $0 <directory> <period>[s] <lifetime>[m]"
     exit 1
 fi
 
@@ -24,19 +24,21 @@ if ! [[ "$3" =~ ^[1-9][0-9]*$ ]]; then
     exit 1
 fi
 
+# Check if the provided lifetime is larger than the period
+if ! ((60*$3 > $2)); then
+    echo "Error: lifetime ($3)m must be larger than creation period ($2)s"
+    exit 1
+fi
+
 directory=$1
 period=$2
 lifetime=$3
 
 while true; do
     timestamp=$(date +%Y%m%d%H%M%S)
-    touch "${directory}/file_${timestamp}"
+    touch "${directory}/file_${timestamp}.root"
 
-    # Convert lifetime in seconds to minutes as that's what find -mmin expects
-    lifetime_in_minutes=$((lifetime / 60))
-
-    # Find and remove files in the directory that are older than the specified lifetime
-    find "$directory" -type f -mmin +$lifetime_in_minutes -exec rm -f {} \;
+    find "$directory" -type f -mmin +$lifetime -exec rm -f {} \;
 
     sleep $period
 done
