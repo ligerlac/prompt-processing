@@ -16,7 +16,7 @@ def main(args):
             if book_keeper.is_registered(f):
                 continue
             book_keeper.register(f)
-            batch_handler.submit(f'python analyze.py {f}')
+            batch_handler.submit(f'python scripts/analyze.py {f}')
 
         previous_jobs = book_keeper.get_unfinished()
         running_jobs = batch_handler.get_running()
