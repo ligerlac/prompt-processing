@@ -20,5 +20,5 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('filename', type=str)
     parser.add_argument('--output', type=str, default='data/output/')
-    parser.add_argument('--success-rate', type=float, default=0.8)
+    parser.add_argument('--success-rate', type=float, default=0.0)
     main(parser.parse_args())

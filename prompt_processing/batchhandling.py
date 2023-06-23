@@ -12,6 +12,12 @@ class BatchHandler(abc.ABC):
     def get_running(self):
         raise NotImplemented
 
+    def increase_quota(self):
+        raise NotImplemented
+
+    def decrease_quota(self):
+        raise NotImplemented
+
 
 class SocketBatchHandler(BatchHandler):
     def __init__(self, address='localhost', port=12345):
