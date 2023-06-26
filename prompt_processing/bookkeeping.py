@@ -9,18 +9,23 @@ class BookKeeper(abc.ABC):
     keeps a collection of tasks
     """
     def update(self, task_list: list[Task]) -> None:
-        self._update([t.__dict__ for t in task_list])
+        raw = {}
+        for t in task_list:
+            raw[t.id] = t.get_dict_wo_id()
+        self._update(raw)
 
     def add(self, task_list: list[Task]) -> None:
-        self._add([t.__dict__ for t in task_list])
+        self._add([t.get_dict_wo_id() for t in task_list])
 
     def get(self, dt=datetime.timedelta(days=1)) -> list[Task]:
+        raw = self._get(dt)
+        print(f'raw = {raw}')
+        return [Task(**x) for x in raw]
+
+    def _update(self, dict_list: dict) -> None:
         raise NotImplementedError
 
-    def _update(self, dict_list: list[dict]) -> list[dict]:
-        raise NotImplementedError
-
-    def _add(self, dict_list: list[dict]) -> list[dict]:
+    def _add(self, dict_list: list[dict]) -> None:
         raise NotImplementedError
 
     def _get(self, dt=datetime.timedelta(days=1)) -> list[dict]:
@@ -56,22 +61,21 @@ class LocalBookKeeper(BookKeeper):
             df = pd.DataFrame(columns=Task.get_field_names())
             return df
 
-    def update(self, tasks):
-        list_ = [t.__dict__ for t in tasks]
-        df_ = pd.DataFrame(list_)
-        print(df_)
+    def _update(self, dict_list: list[dict]) -> None:
+        df_ = pd.DataFrame(dict_list)
 
-    def add(self, tasks):
-        list_ = [t.__dict__ for t in tasks]
-        df_ = pd.DataFrame(list_)
-        self.df = pd.concat([self.df, df_])
+    def _add(self, dict_list: list[dict]) -> None:
+        df_ = pd.DataFrame(dict_list)
+        self.df = pd.concat([self.df, df_], ignore_index=True)
 
-    def get(self, dt=datetime.timedelta(days=1)):
+    def _get(self, dt=datetime.timedelta(days=1)) -> list[dict]:
         cutoff = datetime.datetime.now() - dt
-        print(f'cutoff = {cutoff}')
-        print(f"self.df['created'] = {self.df['created']}")
-        x = self.df[self.df['created'] > cutoff]
-        return x
+        df_filtered = self.df[self.df['created'] > cutoff]
+        records = df_filtered.to_dict(orient='records')
+        ids = df_filtered.to_dict(orient='tight')['index']
+        for r, i in zip(records, ids):
+            r['id'] = i
+        return records
 
     #
     # def register(self, file_name):
