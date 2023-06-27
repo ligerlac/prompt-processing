@@ -22,10 +22,10 @@ class BookKeeper(abc.ABC):
         print(f'raw = {raw}')
         return [Task(**x) for x in raw]
 
-    def _update(self, dict_list: dict) -> None:
+    def _update(self, id_task_dict: dict) -> None:
         raise NotImplementedError
 
-    def _add(self, dict_list: list[dict]) -> None:
+    def _add(self, task_dict_list: list[dict]) -> None:
         raise NotImplementedError
 
     def _get(self, dt=datetime.timedelta(days=1)) -> list[dict]:
@@ -61,11 +61,12 @@ class LocalBookKeeper(BookKeeper):
             df = pd.DataFrame(columns=Task.get_field_names())
             return df
 
-    def _update(self, dict_list: list[dict]) -> None:
-        df_ = pd.DataFrame(dict_list)
+    def _update(self, id_task_dict: dict) -> None:
+        for i, d in id_task_dict.items():
+            self.df.iloc[i] = d
 
-    def _add(self, dict_list: list[dict]) -> None:
-        df_ = pd.DataFrame(dict_list)
+    def _add(self, task_dict_list: list[dict]) -> None:
+        df_ = pd.DataFrame(task_dict_list)
         self.df = pd.concat([self.df, df_], ignore_index=True)
 
     def _get(self, dt=datetime.timedelta(days=1)) -> list[dict]:
