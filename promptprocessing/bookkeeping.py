@@ -1,7 +1,7 @@
 import abc
 import datetime
-from prompt_processing.task import Task
 import pandas as pd
+from prompt_processing.task import Task
 
 
 class BookKeeper(abc.ABC):
@@ -19,7 +19,6 @@ class BookKeeper(abc.ABC):
 
     def get(self, dt=datetime.timedelta(days=1)) -> list[Task]:
         raw = self._get(dt)
-        print(f'raw = {raw}')
         return [Task(**x) for x in raw]
 
     def _update(self, id_task_dict: dict) -> None:
@@ -75,7 +74,7 @@ class LocalBookKeeper(BookKeeper):
         records = df_filtered.to_dict(orient='records')
         ids = df_filtered.to_dict(orient='tight')['index']
         for r, i in zip(records, ids):
-            r['id'] = i
+            r['_id'] = i
         return records
 
     #

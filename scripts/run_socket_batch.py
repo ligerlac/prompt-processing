@@ -1,12 +1,33 @@
 import subprocess
 import random
 import socket
-import multiprocessing as mp
 import argparse
 import logging
+import multiprocessing as mp
+from dataclasses import dataclass
 
 
-all_jobs = {}
+@dataclass
+class Job:
+    """
+    not to confuse with task, but job.task_id == task.id
+    """
+    command: str
+    task_id: int
+    result: None = None
+
+
+all_jobs = []
+
+
+def receive_all(sock):
+    data_chunks = []
+    while True:
+        chunk = sock.recv(1024)
+        if not chunk:
+            break
+        data_chunks.append(chunk)
+    return b''.join(data_chunks)
 
 
 def launch_job(command: str, log_level: int) -> None:
@@ -22,40 +43,43 @@ def launch_job(command: str, log_level: int) -> None:
         logging.error(f'error when running command <{command}>. stdout:\n{out.decode()}\nstderr:\n{err.decode()}')
 
 
-def enqueue_job(line: str) -> str:
-    result = pool.apply_async(launch_job, (line, logging.root.level))
-    all_jobs[line] = result
-    return 'Job started'
+def enqueue_job(command: str, task_id: int) -> str:
+    job = Job(command, task_id)
+    job.result = pool.apply_async(launch_job, (command, logging.root.level))
+    all_jobs.append(job)
+    return f'Job started for task id {task_id}'
 
 
-def get_running_jobs() -> str:
-    running_jobs = []
-    for j, r in all_jobs.items():
-        if not r.ready():
-            running_jobs.append(j)
-    return str(running_jobs)
+def get_running_task_ids() -> str:
+    running_task_ids = []
+    for j in all_jobs:
+        if not j.result.ready():
+            running_task_ids.append(j.task_id)
+    return str(running_task_ids)
 
 
 def process_command(line) -> str:
-    first_word = line.split(' ')[0]
-    rest = line[len(first_word)+1:]
-    if first_word == 'submit':
-        return enqueue_job(rest)
-    elif first_word == 'count':
-        return get_running_jobs()
+    words = line.split('|')
+    if words[0] == 'SUBMIT':
+        return enqueue_job(*words[1:])
+    elif words[0] == 'GET_RUNNING':
+        return get_running_task_ids()
     else:
         return 'invalid command'
 
 
-def serve_socket(s: socket.socket()) -> None:
-    conn, _ = s.accept()
-    request = conn.recv(1024)
-    if not request:
-        return
-    line = request.decode()
-    logging.info(f'Received line: {line}')
-    resp = process_command(line)
-    conn.sendall(resp.encode())
+def serve_socket(s: socket.socket) -> None:
+    conn, addr = s.accept()
+    with conn:
+        logging.info(f'Connected by {addr}')
+        while True:
+            data = conn.recv(1024)
+            if not data:
+                break
+            else:
+                logging.info(f'Received: {data.decode()}')
+                resp = process_command(data.decode())
+                conn.sendall(resp.encode())
 
 
 def main(args):

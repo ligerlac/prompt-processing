@@ -2,3 +2,4 @@ data/
 *pyc
 venv/
 .idea/
+*.egg-info/

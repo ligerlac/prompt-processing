@@ -17,22 +17,22 @@ class Task:
     max_tries: int = 3
     created: datetime = field(default_factory=lambda: datetime.now())
     status: str = 'waiting'
-    id: int | None = None
+    _id: int | None = None
     # _status: str = 'waiting'
     # _id: int | None = None
     #
     # def __post_init__(self):
     #     if self._status not in valid_statuses:
     #         raise ValueError(f'not a valid status: {self._status}. must be one of {valid_statuses}')
-    #
-    # @property
-    # def id(self) -> int:
-    #     return self._id
-    #
-    # @id.setter
-    # def id(self, value):
-    #     raise RuntimeError('<Task.id> is a client-side read-only attribute')
-    #
+
+    @property
+    def id(self) -> int:
+        return self._id
+
+    @id.setter
+    def id(self, value):
+        raise RuntimeError('<Task.id> is a read-only attribute')
+
     # @property
     # def status(self) -> str:
     #     return self._status
@@ -47,10 +47,10 @@ class Task:
     def get_field_names(cls):
         # return [fld.name for fld in fields(cls)]
         d = [fld.name for fld in fields(cls)]
-        d.remove('id')
+        d.remove('_id')
         return d
 
     def get_dict_wo_id(self):
         d = self.__dict__.copy()
-        del d['id']
+        del d['_id']
         return d
