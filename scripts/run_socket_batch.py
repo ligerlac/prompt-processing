@@ -3,6 +3,7 @@ import random
 import socket
 import argparse
 import logging
+import json
 import multiprocessing as mp
 from dataclasses import dataclass
 
@@ -17,7 +18,7 @@ class Job:
     result: None = None
 
 
-all_jobs = []
+running_jobs = []
 
 
 def receive_all(sock):
@@ -46,24 +47,32 @@ def launch_job(command: str, log_level: int) -> None:
 def enqueue_job(command: str, task_id: int) -> str:
     job = Job(command, task_id)
     job.result = pool.apply_async(launch_job, (command, logging.root.level))
-    all_jobs.append(job)
+    running_jobs.append(job)
     return f'Job started for task id {task_id}'
 
 
-def get_running_task_ids() -> str:
+def get_running_task_ids() -> list[int]:
+    print(f'running_jobs = {running_jobs}')
     running_task_ids = []
-    for j in all_jobs:
-        if not j.result.ready():
+    for j in running_jobs.copy():
+        if j.result.ready():
+            running_jobs.remove(j)
+        else:
             running_task_ids.append(j.task_id)
-    return str(running_task_ids)
+    return running_task_ids
 
 
-def process_command(line) -> str:
-    words = line.split('|')
+def change_quota(diff: int):
+    return 'changed'
+
+
+def process_command(words):
     if words[0] == 'SUBMIT':
-        return enqueue_job(*words[1:])
+        return enqueue_job(words[1], words[2])
     elif words[0] == 'GET_RUNNING':
         return get_running_task_ids()
+    elif words[0] == 'CHANGE_QUOTA':
+        return change_quota(words[1])
     else:
         return 'invalid command'
 
@@ -77,9 +86,10 @@ def serve_socket(s: socket.socket) -> None:
             if not data:
                 break
             else:
-                logging.info(f'Received: {data.decode()}')
-                resp = process_command(data.decode())
-                conn.sendall(resp.encode())
+                logging.info(f'Received: {data}')
+                resp = process_command(json.loads(data.decode()))
+                logging.info(f'Returning: {resp}')
+                conn.sendall(json.dumps(resp).encode())
 
 
 def main(args):

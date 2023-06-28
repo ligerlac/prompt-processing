@@ -1,6 +1,6 @@
 import pytest
 import datetime
-from prompt_processing.task import Task
+from promptprocessing.task import Task
 
 
 @pytest.fixture(scope='module')
@@ -22,4 +22,4 @@ def my_task_2():
 def my_sleep_task():
     return Task(input='test_file.root',
                 output='test_file_processed.root',
-                command='sleep 10')
+                command='sleep 1')

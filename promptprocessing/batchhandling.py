@@ -1,15 +1,15 @@
 import abc
 # import htcondor
 import socket
-import pickle
-from promptprocessing import Task
+import json
+from promptprocessing.task import Task
 
 
 class BatchHandler(abc.ABC):
     def submit(self, task: Task):
         raise NotImplementedError
 
-    def get_running(self) -> list[Task]:
+    def get_running_ids(self) -> list[int]:
         raise NotImplementedError
 
     def increase_quota(self):
@@ -24,52 +24,42 @@ class SocketBatchHandler(BatchHandler):
         self.address = address
         self.port = port
 
-    def send_string(self, content) -> str:
+    def send(self, content):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.connect((self.address, self.port))
-            s.sendall(content.encode())
-            return s.recv(1024).decode()
+            s.sendall(json.dumps(content).encode())
+            data = s.recv(1024)
+            return json.loads(data.decode())
 
     def submit(self, task: Task):
         if task.id is None:
             raise RuntimeError('attempted to submit a task without an id. forgot to register it?')
-        r = self.send_string(f'SUBMIT|{task.command}|{task.id}')
-        print(f'submitted job, resp = {r}')
+        self.send(['SUBMIT', task.command, task.id])
 
-    def get_running(self) -> list[Task]:
-        print('get_running()')
-        r = self.send_string('GET_RUNNING')
-        print(f'resp = {r}')
+    def get_running_ids(self) -> list[int]:
+        return self.send(['GET_RUNNING'])
 
-    def receive_all(self):
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            # s.connect((self.address, self.port))
-            # s.bind((self.address, self.port))
-            s.listen()
-            sock, _ = s.accept()
-            data_chunks = []
-            while True:
-                chunk = sock.recv(1024)
-                if not chunk:
-                    break
-                data_chunks.append(chunk)
-            return b''.join(data_chunks)
+    def increase_quota(self):
+        return self.send(['CHANGE_QUOTA', 1])
+
+    def decrease_quota(self):
+        return self.send(['CHANGE_QUOTA', -1])
 
 
 class HTCondorBatchHandler(BatchHandler):
     def submit(self, task: Task):
-        raise NotImplemented
+        raise NotImplementedError
 
-    def get_running(self):
-        raise NotImplemented
+    def get_running_ids(self):
+        raise NotImplementedError
 
 
 class SlurmBatchHandler(BatchHandler):
     def submit(self, f):
-        raise NotImplemented
+        raise NotImplementedError
 
-    def get_running(self):
-        raise NotImplemented
+    def get_running_ids(self):
+        raise NotImplementedError
 
 
 batch_handlers = {'HTCondor': HTCondorBatchHandler,
