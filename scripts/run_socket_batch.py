@@ -52,7 +52,6 @@ def enqueue_job(command: str, task_id: int) -> str:
 
 
 def get_running_task_ids() -> list[int]:
-    print(f'running_jobs = {running_jobs}')
     running_task_ids = []
     for j in running_jobs.copy():
         if j.result.ready():

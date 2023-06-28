@@ -1,52 +1,48 @@
-import socket
+from multiprocessing import Process, Queue
 import time
-import subprocess
-from batchhandling import SocketBatchHandler
-from promptprocessing import Task
+import os
 
 
-handler = SocketBatchHandler()
-
-t = Task('input', 'output', 'python analyze.py')
-t2 = Task('input', 'output', 'sleep 2')
-setattr(t, '_id', 42)  # to circumvent read-only id
-setattr(t2, '_id', 69)  # to circumvent read-only id
-
-handler.submit(t)
-handler.submit(t2)
-time.sleep(0.1)
-print(f'handler.get_running() = {handler.get_running()}')
-
-time.sleep(0.1)
-print(f'handler.get_running() = {handler.get_running()}')
-time.sleep(0.1)
-print(f'handler.get_running() = {handler.get_running()}')
+def worker(q, fallback_q):
+    while True:
+        task = q.get()
+        if task is None:  # None means shutdown
+            break
+        print(f'Process {os.getpid()} working on task {task}')
+        time.sleep(1)  # Simulate work with time.sleep
+        print(f'Process {os.getpid()} finished task {task}')
+    _ = fallback_q.get()
+    worker(q, fallback_q)
 
 
-
-# handler.submit('submit python -c "print(\'from python\')"')
-# handler.submit('count')
-# time.sleep(3)
-# handler.submit('count')
+def add_task(q, task):
+    q.put(task)
 
 
-exit(0)
+def main():
+    q = Queue(maxsize=10)
+    fallback_q = Queue(maxsize=10)
+
+    pool = [Process(target=worker, args=(q, fallback_q)) for _ in range(2)]
+    for p in pool:
+        p.start()
+
+    for i in range(10):
+        add_task(q, i)
+
+    q.put(None)
+
+    for i in range(10):
+        add_task(q, i)
+
+    fallback_q.put(None)
+
+    for i in range(10):
+        add_task(q, i)
+
+    for p in pool:
+        p.join()
 
 
-class LocalBatchSimulator:
-    def __init__(self, address='localhost', port=12345):
-        self.address = address
-        self.port = port
-
-    def submit_job(self, job):
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.connect((self.address, self.port))
-            s.sendall(job.encode())
-            data = s.recv(1024)
-        print(f'Received: {data.decode()}')
-
-
-if __name__ == '__main__':
-    simulator = LocalBatchSimulator()
-    simulator.submit_job('Job1')
-    simulator.submit_job('Job2')
+if __name__ == "__main__":
+    main()
