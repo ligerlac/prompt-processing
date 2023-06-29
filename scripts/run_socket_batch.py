@@ -19,7 +19,7 @@ class Job:
     task_id: int
 
 
-def launch_job(command: str, log_level=logging.INFO) -> None:
+def launch_job(command: str, log_level: int = logging.INFO) -> None:
     logging.getLogger().setLevel(log_level)
     proc = subprocess.Popen(
         command, shell=True,
@@ -32,14 +32,30 @@ def launch_job(command: str, log_level=logging.INFO) -> None:
         logging.error(f'error when running command <{command}>. stdout:\n{out.decode()}\nstderr:\n{err.decode()}')
 
 
+def worker(q, restart_q, running_jobs, log_level: int):
+    while True:
+        job = q.get()
+        if job is None:  # None means shutdown
+            break
+        logging.info(f'Process {os.getpid()} working on task {job}')
+        launch_job(job.command, log_level)
+        logging.info(f'Process {os.getpid()} finished job {job}')
+        running_jobs.remove(job)
+    print(f'Shutting down worker with id {os.getpid()}')
+    _ = restart_q.get()
+    print(f'Restarting worker with id {os.getpid()}')
+    worker(q, restart_q, running_jobs, log_level)
+
+
 class JobManager:
-    def __init__(self, manager, max_processes=8):
+    def __init__(self, manager, max_quota=8):
         self.q = manager.Queue()
         self.restart_q = manager.Queue()
         self.running_jobs = manager.list()
-        self.n_running = max_processes
-        self.max_processes = max_processes
-        self.pool = [mp.Process(target=self.worker, args=(logging.root.level,)) for _ in range(max_processes)]
+        self.quota = max_quota
+        self.max_quota = max_quota
+        self.pool = [mp.Process(target=worker, args=(self.q, self.restart_q, self.running_jobs, logging.root.level)
+                                     ) for _ in range(max_quota)]
         for p in self.pool:
             p.start()
 
@@ -53,7 +69,7 @@ class JobManager:
             logging.info(f'Process {os.getpid()} finished job {job}')
             self.running_jobs.remove(job)
         _ = self.restart_q.get()
-        self.worker()
+        self.worker(log_level)
 
     def enqueue_job(self, command: str, task_id: int) -> str:
         job = Job(command, task_id)
@@ -65,30 +81,44 @@ class JobManager:
         return [job.task_id for job in self.running_jobs]
 
     def increase_quota(self) -> bool:
-        if self.n_running >= self.max_processes:
+        print(f'increase_quota(), self.quota = {self.quota}')
+        if self.quota >= self.max_quota:
             return False
         self.restart_q.put(None)
-        self.n_running += 1
+        x = self.quota + 1
+        self.quota = x
         return True
 
     def decrease_quota(self) -> bool:
-        if self.n_running == 0:
+        print(f'decrease_quota(), self.quota = {self.quota}')
+        if self.quota == 0:
             return False
         self.q.put(None)
-        self.n_running -= 1
+        x = self.quota - 1
+        self.quota = x
         return True
 
     def change_quota(self, diff: int) -> str:
         if diff > 0:
             for i in range(abs(diff)):
                 if not self.increase_quota():
-                    return f'Reached max quota ({self.max_processes}) after increasing by {i}'
+                    return f'Reached max quota ({self.max_quota}) after increasing by {i}'
             return f'Increased quota by {diff}'
         if diff < 0:
             for i in range(abs(diff)):
-                if not self.increase_quota():
+                if not self.decrease_quota():
                     return f'Reached 0 quota after decreasing by {i}'
+            return f'Decreased quota by {abs(diff)}'
         return f'Did not change quota (diff=0)'
+
+    def set_quota(self, n) -> str:
+        for _ in range(self.quota):
+            self.q.put(None)
+        m = self.max_quota if (n > self.max_quota) else n
+        for _ in range(m):
+            self.restart_q.put(None)
+        self.quota = m
+        return f'Set quota to {m}'
 
 
 def process_command(words, jm):
@@ -98,6 +128,12 @@ def process_command(words, jm):
         return jm.get_running_task_ids()
     elif words[0] == 'CHANGE_QUOTA':
         return jm.change_quota(words[1])
+    elif words[0] == 'SET_QUOTA':
+        return jm.set_quota(words[1])
+    elif words[0] == 'GET_QUOTA':
+        return jm.quota
+    elif words[0] == 'GET_MAX_QUOTA':
+        return jm.max_quota
     else:
         return 'invalid command'
 
@@ -118,10 +154,10 @@ def serve_socket(s: socket.socket, jm: JobManager) -> None:
 
 
 def main(args):
+    # pool = [mp.Process(target=JobManager.worker, args=(logging.root.level,)) for _ in range(8)]
     logging.getLogger().setLevel(args.log_level)
     with mp.Manager() as manager:
-        job_manager = JobManager(manager, max_processes=1)
-
+        job_manager = JobManager(manager, max_quota=8)
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             print(f'running server under {args.hostname}:{args.port}')
             s.bind((args.hostname, args.port))

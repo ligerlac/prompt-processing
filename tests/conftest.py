@@ -22,4 +22,4 @@ def my_task_2():
 def my_sleep_task():
     return Task(input='test_file.root',
                 output='test_file_processed.root',
-                command='sleep 1')
+                command='sleep 0.1')

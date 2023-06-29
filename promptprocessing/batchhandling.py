@@ -3,7 +3,6 @@ import abc
 import socket
 import json
 from promptprocessing.task import Task
-# from promptprocessing.task import Task
 
 
 class BatchHandler(abc.ABC):
@@ -17,6 +16,12 @@ class BatchHandler(abc.ABC):
         raise NotImplementedError
 
     def decrease_quota(self):
+        raise NotImplementedError
+
+    def get_quota(self):
+        raise NotImplementedError
+
+    def set_quota(self, n):
         raise NotImplementedError
 
 
@@ -45,6 +50,15 @@ class SocketBatchHandler(BatchHandler):
 
     def decrease_quota(self):
         return self.send(['CHANGE_QUOTA', -1])
+
+    def get_quota(self):
+        return self.send(['GET_QUOTA'])
+
+    def set_quota(self, n):
+        return self.send(['SET_QUOTA', n])
+
+    def get_max_quota(self):
+        return self.send(['GET_MAX_QUOTA'])
 
 
 class HTCondorBatchHandler(BatchHandler):
