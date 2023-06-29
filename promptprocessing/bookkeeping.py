@@ -1,7 +1,7 @@
 import abc
 import datetime
 import pandas as pd
-from prompt_processing.task import Task
+from promptprocessing.task import Task
 
 
 class BookKeeper(abc.ABC):

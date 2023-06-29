@@ -1,8 +1,21 @@
 from multiprocessing import Process, Queue
 import time
 import os
+import batchhandling as bh
+from task import Task
+
+batch_handler = bh.SocketBatchHandler()
+
+# t = Task('a', 'b', 'echo aha && sleep 5 && echo bye')
+t = Task('a', 'b', 'echo hi')
+setattr(t, '_id', 42)  # to circumvent read-only id
+batch_handler.submit(t)
+print(f'batch_handler.get_running_ids() = {batch_handler.get_running_ids()}')
+time.sleep(1)
+print(f'batch_handler.get_running_ids() = {batch_handler.get_running_ids()}')
 
 
+exit(0)
 def worker(q, fallback_q):
     while True:
         task = q.get()

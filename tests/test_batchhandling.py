@@ -3,12 +3,14 @@ import time
 import pytest
 import promptprocessing.batchhandling as bh
 
+
 try:
-    subprocess.check_output(['python', '../scripts/run_socket_batch.py', '-l', 'INFO'], stderr=subprocess.STDOUT)
-    # subprocess.check_output(['python', '../scripts/run_socket_batch.py', '-l', 'INFO'])
+    subprocess.check_call(['python', '../scripts/run_socket_batch.py', '-l', 'INFO'],
+                          stderr=subprocess.PIPE, stdout=subprocess.PIPE)
     time.sleep(1)
 except subprocess.CalledProcessError:
     print(f'Backend already running')
+
 
 batch_handler = bh.SocketBatchHandler()
 
