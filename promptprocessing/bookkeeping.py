@@ -110,6 +110,3 @@ class LocalBookKeeper(BookKeeper):
 class DBBookKeeper(BookKeeper):
     def __init__(self):
         raise NotImplementedError
-
-
-book_keepers = {'local': LocalBookKeeper, 'DB': DBBookKeeper}

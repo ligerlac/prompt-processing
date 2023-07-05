@@ -75,8 +75,3 @@ class SlurmBatchHandler(BatchHandler):
 
     def get_running_ids(self):
         raise NotImplementedError
-
-
-batch_handlers = {'HTCondor': HTCondorBatchHandler,
-                  'Slurm': SlurmBatchHandler,
-                  'Socket': SocketBatchHandler}

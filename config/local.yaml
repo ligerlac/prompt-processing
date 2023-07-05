@@ -1,0 +1,11 @@
+batch_handler:
+  SocketBatchHandler:
+    address: 'localhost'
+    port: 12345
+book_keeper:
+  LocalBookKeeper:
+    file_name: 'data/bookkeeping/data_frame.csv'
+file_handler:
+  LocalFileHandler:
+    input_dir: 'data/input'
+    output_dir: 'data/output'

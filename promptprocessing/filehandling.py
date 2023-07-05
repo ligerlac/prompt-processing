@@ -16,14 +16,14 @@ class FileHandler(abc.ABC):
 
 class LocalFileHandler(FileHandler):
 
-    @staticmethod
-    def get_files_in_buffer():
-        return glob.glob('data/input/*')
+    def __init__(self, input_dir, output_dir):
+        self.input_dir = input_dir
+        self.output_dir = output_dir
 
-    @staticmethod
-    def was_success(filename):
-        filename_ = filename.replace('input', 'output')
+    def get_files_in_buffer(self):
+        return glob.glob(f'{self.input_dir}/*')
+
+    def was_success(self, filename):
+        # filename_ = filename.replace('input', 'output')
+        filename_ = f'{self.output_dir}/{filename}'
         return os.path.isfile(filename_)
-
-
-file_handlers = {'local': LocalFileHandler}
