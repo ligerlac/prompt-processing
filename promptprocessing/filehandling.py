@@ -7,11 +7,14 @@ class FileHandler(abc.ABC):
 
     @staticmethod
     def get_files_in_buffer():
-        raise NotImplemented
+        raise NotImplementedError
 
     @staticmethod
     def was_success(filename):
-        raise NotImplemented
+        raise NotImplementedError
+
+    def get_output_dir(self, file_name):
+        raise NotImplementedError
 
 
 class LocalFileHandler(FileHandler):
@@ -23,7 +26,9 @@ class LocalFileHandler(FileHandler):
     def get_files_in_buffer(self):
         return glob.glob(f'{self.input_dir}/*')
 
-    def was_success(self, filename):
+    def was_success(self, file_name):
         # filename_ = filename.replace('input', 'output')
-        filename_ = f'{self.output_dir}/{filename}'
-        return os.path.isfile(filename_)
+        return os.path.isfile(self.get_output_dir(file_name))
+
+    def get_output_dir(self, file_name):
+        return f'{self.output_dir}/{file_name}'

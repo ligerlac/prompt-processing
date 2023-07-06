@@ -1,26 +1,37 @@
 import logging
+from promptprocessing import Task
 
 
 def register_new_files(file_handler, book_keeper):
+    new_tasks = []
+    registered_files = [t.input for t in book_keeper.get()]
     for f in file_handler.get_files_in_buffer():
-        if not book_keeper.is_registered(f):
+        if f not in registered_files:
             logging.info(f'registering new file {f}...')
-            book_keeper.register(f)
+            t = Task(f, file_handler.get_output_dir(f), f'python analyze.py {f}')
+            new_tasks.append(t)
+    book_keeper.add(new_tasks)
+
+# def register_new_tasks(file_handler, book_keeper, task_template):
+#     pass
 
 
 def manage_job_queue(file_handler, book_keeper, batch_handler, max_tries=3):
-    running_jobs = batch_handler.get_running()
-    for f in book_keeper.get_unfinished():
-        if f in running_jobs:
+    # running_jobs = batch_handler.get_running()
+    running_ids = batch_handler.get_running_ids()
+    unfinished_tasks = book_keeper.get_unfinished()
+    for t in unfinished_tasks:
+        if t.id in running_ids:
             continue
-        if file_handler.was_success(f):
-            book_keeper.mark_as_success(f)
+        if file_handler.was_success(t.output):
+            t.status = 'success'
             continue
-        book_keeper.increment_tries(f)
-        if book_keeper.get_tries(f) > max_tries:
-            book_keeper.mark_as_fail(f)
+        t.n_tries += 1
+        if t.n_tries > t.max_tries:
+            t.status = 'fail'
         else:
-            batch_handler.submit(f'python scripts/analyze.py {f}')
+            batch_handler.submit(t)
+    book_keeper.update(unfinished_tasks)
 
 
 def adjust_batch_quota(book_keeper, batch_handler, goal=10):

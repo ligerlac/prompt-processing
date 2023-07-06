@@ -2,7 +2,7 @@ from datetime import datetime
 from dataclasses import dataclass, field, fields
 from typing import List, Optional
 
-valid_statuses = ['waiting', 'running', 'fail', 'success']
+valid_statuses = ['unfinished', 'fail', 'success']
 
 
 @dataclass
@@ -15,8 +15,8 @@ class Task:
     command: str
     n_tries: int = 0
     max_tries: int = 3
-    created: datetime = field(default_factory=lambda: datetime.now())
-    status: str = 'waiting'
+    created: datetime = field(default_factory=datetime.now)
+    status: str = 'unfinished'
     _id: int | None = None
     # _status: str = 'waiting'
     # _id: int | None = None
@@ -54,3 +54,8 @@ class Task:
         d = self.__dict__.copy()
         del d['_id']
         return d
+
+
+# class TaskCreator:
+#     def __init__(self):
+#         pass

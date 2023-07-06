@@ -17,8 +17,8 @@ class BookKeeper(abc.ABC):
     def add(self, task_list: list[Task]) -> None:
         self._add([t.get_dict_wo_id() for t in task_list])
 
-    def get(self, dt=datetime.timedelta(days=1)) -> list[Task]:
-        raw = self._get(dt)
+    def get(self, dt=datetime.timedelta(days=1), status=None) -> list[Task]:
+        raw = self._get(dt, status)
         return [Task(**x) for x in raw]
 
     def _update(self, id_task_dict: dict) -> None:
@@ -27,7 +27,7 @@ class BookKeeper(abc.ABC):
     def _add(self, task_dict_list: list[dict]) -> None:
         raise NotImplementedError
 
-    def _get(self, dt=datetime.timedelta(days=1)) -> list[dict]:
+    def _get(self, dt=datetime.timedelta(days=1), status=None) -> list[dict]:
         raise NotImplementedError
     # def is_registered(self, file_name):
     #     raise NotImplementedError
@@ -68,9 +68,11 @@ class LocalBookKeeper(BookKeeper):
         df_ = pd.DataFrame(task_dict_list)
         self.df = pd.concat([self.df, df_], ignore_index=True)
 
-    def _get(self, dt=datetime.timedelta(days=1)) -> list[dict]:
+    def _get(self, dt=datetime.timedelta(days=1), status=None) -> list[dict]:
         cutoff = datetime.datetime.now() - dt
         df_filtered = self.df[self.df['created'] > cutoff]
+        if status is not None:
+            df_filtered = df_filtered[df_filtered['status'] == status]
         records = df_filtered.to_dict(orient='records')
         ids = df_filtered.to_dict(orient='tight')['index']
         for r, i in zip(records, ids):

@@ -23,3 +23,11 @@ def my_sleep_task():
     return Task(input='test_file.root',
                 output='test_file_processed.root',
                 command='sleep 0.1')
+
+
+@pytest.fixture(scope='module')
+def my_successful_task():
+    return Task(input='test_file.root',
+                output='test_file_processed.root',
+                command='sleep 0.1',
+                status='success')
