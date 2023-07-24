@@ -32,10 +32,11 @@ def launch_job(command: str, log_level: int = logging.INFO) -> None:
         logging.error(f'error when running command <{command}>. stdout:\n{out.decode()}\nstderr:\n{err.decode()}')
 
 
-def worker(q, restart_q, running_jobs, log_level: int):
+def worker(q, restart_q, wait_bool,running_jobs, log_level: int):
     while True:
         job = q.get()
         if job is None:  # None means shutdown
+            wait_bool.value = False
             break
         logging.info(f'Process {os.getpid()} working on task {job}')
         launch_job(job.command, log_level)
@@ -44,7 +45,7 @@ def worker(q, restart_q, running_jobs, log_level: int):
     print(f'Shutting down worker with id {os.getpid()}')
     _ = restart_q.get()
     print(f'Restarting worker with id {os.getpid()}')
-    worker(q, restart_q, running_jobs, log_level)
+    worker(q, restart_q, wait_bool, running_jobs, log_level)
 
 
 class JobManager:
@@ -52,24 +53,27 @@ class JobManager:
         self.q = manager.Queue()
         self.restart_q = manager.Queue()
         self.running_jobs = manager.list()
+        self.waiting_for_shutdown = manager.Value('i', False)
         self.quota = max_quota
         self.max_quota = max_quota
-        self.pool = [mp.Process(target=worker, args=(self.q, self.restart_q, self.running_jobs, logging.root.level)
+        self.pool = [mp.Process(target=worker, args=(self.q, self.restart_q, self.waiting_for_shutdown,
+                                                     self.running_jobs, logging.root.level)
                                      ) for _ in range(max_quota)]
         for p in self.pool:
             p.start()
 
-    def worker(self, log_level: int):
-        while True:
-            job = self.q.get()
-            if job is None:  # None means shutdown
-                break
-            logging.info(f'Process {os.getpid()} working on task {job}')
-            launch_job(job.command, log_level)
-            logging.info(f'Process {os.getpid()} finished job {job}')
-            self.running_jobs.remove(job)
-        _ = self.restart_q.get()
-        self.worker(log_level)
+    # def worker(self, log_level: int):
+    #     while True:
+    #         job = self.q.get()
+    #         if job is None:  # None means shutdown
+    #             self.waiting_for_shutdown.value = False
+    #             break
+    #         logging.info(f'Process {os.getpid()} working on task {job}')
+    #         launch_job(job.command, log_level)
+    #         logging.info(f'Process {os.getpid()} finished job {job}')
+    #         self.running_jobs.remove(job)
+    #     _ = self.restart_q.get()
+    #     self.worker(log_level)
 
     def enqueue_job(self, command: str, task_id: int) -> str:
         job = Job(command, task_id)
@@ -81,21 +85,19 @@ class JobManager:
         return [job.task_id for job in self.running_jobs]
 
     def increase_quota(self) -> bool:
-        print(f'increase_quota(), self.quota = {self.quota}')
         if self.quota >= self.max_quota:
             return False
         self.restart_q.put(None)
-        x = self.quota + 1
-        self.quota = x
+        self.quota += 1
         return True
 
     def decrease_quota(self) -> bool:
-        print(f'decrease_quota(), self.quota = {self.quota}')
-        if self.quota == 0:
+        print(f'decrease_quota(), waiting for shutdown.value = {self.waiting_for_shutdown.value}')
+        if self.quota <= 1 or self.waiting_for_shutdown.value:
             return False
+        self.waiting_for_shutdown.value = True
         self.q.put(None)
-        x = self.quota - 1
-        self.quota = x
+        self.quota -= 1
         return True
 
     def change_quota(self, diff: int) -> str:

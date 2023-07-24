@@ -51,7 +51,9 @@ class BookKeeper(abc.ABC):
 class LocalBookKeeper(BookKeeper):
     def __init__(self, file_name):
         self.file_name = file_name
-        self.df = self._get_df()
+
+    def _write_df(self, df):
+        df.to_csv(self.file_name, sep=',')
 
     def _get_df(self):
         try:
@@ -61,21 +63,27 @@ class LocalBookKeeper(BookKeeper):
             return df
 
     def _update(self, id_task_dict: dict) -> None:
+        df = self._get_df()
         for i, d in id_task_dict.items():
-            self.df.iloc[i] = d
+            df.iloc[i] = d
+        self._write_df(df)
 
     def _add(self, task_dict_list: list[dict]) -> None:
-        df_ = pd.DataFrame(task_dict_list)
-        self.df = pd.concat([self.df, df_], ignore_index=True)
+        df_before = self._get_df()
+        new_df = pd.DataFrame(task_dict_list)
+        df_after = pd.concat([df_before, new_df], ignore_index=True)
+        self._write_df(df_after)
 
     def _get(self, dt=datetime.timedelta(days=1), status=None) -> list[dict]:
+        df = self._get_df()
         cutoff = datetime.datetime.now() - dt
-        df_filtered = self.df[self.df['created'] > cutoff]
+        df_filtered = df[pd.to_datetime(df['created']) > cutoff]
         if status is not None:
             df_filtered = df_filtered[df_filtered['status'] == status]
         records = df_filtered.to_dict(orient='records')
         ids = df_filtered.to_dict(orient='tight')['index']
         for r, i in zip(records, ids):
+            r['created'] = pd.to_datetime(r['created'])
             r['_id'] = i
         return records
 

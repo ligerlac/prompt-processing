@@ -1,3 +1,3 @@
-* * * * * /path/to/your/command
-* * * * * /path/to/your/command
-* * * * * /path/to/your/command
+* * * * * /Users/linogerlach/Projects/DUNE/WireCell/promptprocessing/scripts/automation/adjust_batch_quota.sh
+* * * * * /Users/linogerlach/Projects/DUNE/WireCell/promptprocessing/scripts/automation/manage_job_queue.sh
+* * * * * /Users/linogerlach/Projects/DUNE/WireCell/promptprocessing/scripts/automation/register_new_files.sh

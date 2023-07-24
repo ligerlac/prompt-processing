@@ -34,11 +34,14 @@ directory=$1
 period=$2
 lifetime=$3
 
+
 while true; do
     timestamp=$(date +%Y%m%d%H%M%S)
     touch "${directory}/file_${timestamp}.root"
 
     find "$directory" -type f -mmin +$lifetime -exec rm -f {} \;
+    sleep $((period/2))
 
-    sleep $period
+    find "$directory" -type f -mmin +$lifetime -exec rm -f {} \;
+    sleep $((period/2))
 done

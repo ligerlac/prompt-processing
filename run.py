@@ -26,13 +26,19 @@ def main(args):
     elif args.workflow == 'manage-job-queue':
         pp.manage_job_queue(file_handler, book_keeper, batch_handler)
     elif args.workflow == 'adjust-batch-quota':
-        pp.adjust_batch_quota(book_keeper, batch_handler)
-
-    while True:
-        pp.register_new_files(file_handler, book_keeper)
-        pp.manage_job_queue(file_handler, book_keeper, batch_handler)
-        pp.adjust_batch_quota(book_keeper, batch_handler)
-        time.sleep(args.sleep_time)
+        pp.adjust_batch_quota(book_keeper, batch_handler, conf_dict['backlog_goal'])
+    elif args.workflow == 'monitor':
+        pp.monitor(file_handler, book_keeper, batch_handler)
+    elif args.workflow == 'loop-all':
+        i = 0
+        while True:
+            pp.register_new_files(file_handler, book_keeper)
+            pp.manage_job_queue(file_handler, book_keeper, batch_handler)
+            # pp.adjust_batch_quota(book_keeper, batch_handler, conf_dict['backlog_goal'])
+            if (i % 16) == 0:
+                pp.adjust_batch_quota(book_keeper, batch_handler, conf_dict['backlog_goal'])
+            i += 1
+            time.sleep(1)
 
 
 if __name__ == '__main__':
@@ -40,7 +46,6 @@ if __name__ == '__main__':
     parser.add_argument('--config', type=str, default='config/local.yaml',
                         help='path to config file')
     parser.add_argument('--workflow', choices=['register-new-files', 'manage-job-queue',
-                                               'adjust-batch-quota', 'loop-all'], default='loop-all')
-    parser.add_argument('-l', '--log-level', choices=['DEBUG', 'INFO', 'WARNING'],
-                        default='WARNING')
+                                               'adjust-batch-quota', 'loop-all', 'monitor'], default='loop-all')
+    parser.add_argument('-l', '--log-level', choices=['DEBUG', 'INFO', 'WARNING'], default='WARNING')
     main(parser.parse_args())

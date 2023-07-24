@@ -13,6 +13,8 @@ def test_add_task(my_task_1):
     assert len(read_back) == 1
     t1_re = read_back[0]
     assert t1_re.id is not None
+    print(my_task_1)
+    print(t1_re)
     assert t1_re.get_dict_wo_id() == my_task_1.get_dict_wo_id()
 
 

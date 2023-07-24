@@ -18,6 +18,9 @@ class BatchHandler(abc.ABC):
     def decrease_quota(self):
         raise NotImplementedError
 
+    def change_quota(self, d: int):
+        raise NotImplementedError
+
     def get_quota(self):
         raise NotImplementedError
 
@@ -50,6 +53,9 @@ class SocketBatchHandler(BatchHandler):
 
     def decrease_quota(self):
         return self.send(['CHANGE_QUOTA', -1])
+
+    def change_quota(self, diff: int):
+        return self.send(['CHANGE_QUOTA', diff])
 
     def get_quota(self):
         return self.send(['GET_QUOTA'])

@@ -27,8 +27,7 @@ class LocalFileHandler(FileHandler):
         return glob.glob(f'{self.input_dir}/*')
 
     def was_success(self, file_name):
-        # filename_ = filename.replace('input', 'output')
-        return os.path.isfile(self.get_output_dir(file_name))
+        return os.path.isfile(file_name)
 
     def get_output_dir(self, file_name):
         return f'{self.output_dir}/{file_name}'
